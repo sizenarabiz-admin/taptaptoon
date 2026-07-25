@@ -33,6 +33,34 @@
   }
   .site-header h1{font-size:20px;margin:0;}
   .site-header p{font-size:12.5px;color:#8a8478;margin:4px 0 0;}
+  .tab-bar{display:flex;gap:6px;padding:14px 16px 0;}
+  .tab-btn{
+    flex:1;text-align:center;padding:9px 6px;border-radius:10px;border:none;
+    background:transparent;color:#9a9385;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .tab-btn.active{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .news-list{padding:14px 16px 0;}
+  .news-card{
+    display:block;background:var(--card);border-radius:14px;padding:14px 16px;
+    margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  .news-card .tag{font-size:10.5px;font-weight:700;color:#8a8478;background:var(--paper);padding:2px 8px;border-radius:10px;}
+  .news-card .ntitle{font-size:14.5px;font-weight:700;margin-top:8px;line-height:1.4;}
+  .news-card .nsum{font-size:12.5px;color:#9a9385;margin-top:5px;line-height:1.5;}
+  .text-reader{padding:18px 20px 0;}
+  .para{display:grid;margin-bottom:16px;font-size:15px;line-height:1.85;color:#3a352c;}
+  .panel.panel-text{
+    background:transparent;box-shadow:none;border-radius:0;overflow:visible;
+    padding:2px 4px 20px;margin-bottom:8px;border-bottom:1px solid var(--line);
+    touch-action:pan-y;
+  }
+  .panel.panel-text:last-of-type{border-bottom:none;}
+  .para > span{grid-area:1/1;transition:opacity .1s linear;}
+  .para .en{opacity:0;}
+  .article-head{padding:16px 20px 4px;}
+  .article-head h2{font-size:18px;line-height:1.4;margin:6px 0 0;}
+  .article-head .tag{font-size:10.5px;font-weight:700;color:#8a8478;background:var(--wall);padding:2px 8px;border-radius:10px;}
+
   .series-grid{
     display:grid;grid-template-columns:1fr 1fr;gap:14px;
     padding:16px;
@@ -95,8 +123,12 @@
     background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08);
     touch-action:pan-y;user-select:none;-webkit-user-select:none;
   }
-  .panel svg{display:block;width:100%;height:auto;}
-  .bg-layer{transition:filter .2s linear;}
+  .art{position:relative;width:100%;min-height:230px;background:#eee;overflow:hidden;}
+  .art img{display:block;width:100%;height:auto;}
+  .art.missing img{display:none;}
+  .missing-label{display:none;position:absolute;inset:0;align-items:center;justify-content:center;
+    text-align:center;color:#9a9385;font-size:12.5px;line-height:1.6;padding:16px;background:#eee;}
+  .art.missing .missing-label{display:flex;flex-direction:column;}
 
   .bubble{
     position:absolute;display:grid;background:#fff;border:1.5px solid var(--ink);
@@ -136,88 +168,20 @@
 <body>
 <div id="app" class="app"></div>
 <script>
-/* ============ characters ============ */
-function humanSVG(c){
-  const x=c.x, flip=c.flip?-1:1, outfit=c.outfit||'#7FB3E0', hair=c.hair||'#2b2b2b', skin=c.skin||'#F5D9B8';
-  const mouth = c.mouth==='open'
-    ? `<circle cx="0" cy="-6" r="3" fill="none" stroke="#b5654a" stroke-width="1.4"/>`
-    : c.mouth==='smile'
-    ? `<path d="M -8 -6 Q 0 0 8 -6" stroke="#b5654a" stroke-width="2" fill="none" stroke-linecap="round"/>`
-    : `<path d="M -5 -6 Q 0 -3 5 -6" stroke="#b5654a" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
-  const blush = c.blush ? `<circle cx="-13" cy="-8" r="6" fill="#f6b8a3" opacity=".6"/><circle cx="13" cy="-8" r="6" fill="#f6b8a3" opacity=".6"/>` : '';
-  return `<g transform="translate(${x},124) scale(${flip},1)">
-    <rect x="-16" y="34" width="12" height="42" rx="4" fill="#3d3d3d"/>
-    <rect x="6" y="34" width="12" height="42" rx="4" fill="#3d3d3d"/>
-    <rect x="-22" y="0" width="46" height="42" rx="14" fill="${outfit}"/>
-    <circle cx="0" cy="-16" r="19" fill="${skin}"/>
-    <path d="M -19 -20 Q 0 -40 19 -20 Q 19 -8 12 -6 Q 8 -22 0 -22 Q -8 -22 -12 -6 Q -19 -8 -19 -20 Z" fill="${hair}"/>
-    <circle cx="-7" cy="-14" r="1.6" fill="#2b2b2b"/>
-    <circle cx="7" cy="-14" r="1.6" fill="#2b2b2b"/>
-    ${blush}${mouth}
-  </g>`;
+/* ============ panel art (real image files) ============ */
+// 이미지 파일 위치 규칙: images/{category}/{id}/ep{01~}_p{1~}.jpg
+function panelImgPath(category, id, epIdx, panelIdx){
+  const ep = String(epIdx+1).padStart(2,'0');
+  return `images/${category}/${id}/ep${ep}_p${panelIdx+1}.jpg`;
 }
-function catSVG(c){
-  const x=c.x, flip=c.flip?-1:1, fur=c.fur||'#E8A33D';
-  return `<g transform="translate(${x},150) scale(${flip},1)">
-    <ellipse cx="0" cy="18" rx="26" ry="16" fill="${fur}"/>
-    <path d="M 22 14 Q 46 6 42 -14" stroke="${fur}" stroke-width="9" fill="none" stroke-linecap="round"/>
-    <circle cx="0" cy="-6" r="18" fill="${fur}"/>
-    <path d="M -16 -14 L -8 -26 L -2 -13 Z" fill="${fur}"/>
-    <path d="M 16 -14 L 8 -26 L 2 -13 Z" fill="${fur}"/>
-    <ellipse cx="-10" cy="-4" rx="10" ry="8" fill="#fff" opacity=".55"/>
-    <circle cx="-6" cy="-7" r="1.6" fill="#2b2b2b"/>
-    <circle cx="6" cy="-7" r="1.6" fill="#2b2b2b"/>
-    <path d="M -4 -1 Q 0 2 4 -1" stroke="#8a5a2b" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-    <g stroke="#c98a30" stroke-width="1">
-      <line x1="-8" y1="0" x2="-24" y2="-3"/><line x1="-8" y1="3" x2="-24" y2="5"/>
-      <line x1="8" y1="0" x2="24" y2="-3"/><line x1="8" y1="3" x2="24" y2="5"/>
-    </g>
-  </g>`;
-}
-function propUmbrella(x){
-  return `<g><path d="M ${x-52} 60 Q ${x-52} 30 ${x+8} 34 Q ${x+58} 38 ${x+60} 62 Z" fill="#F2C744"/>
-  <line x1="${x+10}" y1="34" x2="${x+10}" y2="100" stroke="#7a5a1e" stroke-width="3"/></g>`;
-}
-function propGate(){
-  return `<g><rect x="60" y="40" width="16" height="140" fill="#9a8b6f"/>
-  <rect x="224" y="40" width="16" height="140" fill="#9a8b6f"/>
-  <rect x="60" y="40" width="180" height="16" fill="#9a8b6f"/>
-  <text x="150" y="34" text-anchor="middle" font-size="13" fill="#6b6250">S C H O O L</text></g>`;
-}
-
-/* ============ backgrounds ============ */
-function bgLayer(panel){
-  const t = panel.bg;
-  let inner = '';
-  if(t==='outdoor' || t==='rain'){
-    inner += `<rect width="300" height="220" fill="var(--sky)"/><rect y="160" width="300" height="60" fill="var(--ground)"/>`;
-    if(t==='rain'){
-      inner += `<g stroke="#8fb8d6" stroke-width="2" stroke-linecap="round">
-        <line x1="20" y1="10" x2="8" y2="40"/><line x1="60" y1="0" x2="48" y2="35"/>
-        <line x1="110" y1="15" x2="98" y2="50"/><line x1="150" y1="0" x2="138" y2="30"/>
-        <line x1="200" y1="20" x2="188" y2="55"/><line x1="250" y1="5" x2="238" y2="40"/>
-        <line x1="280" y1="25" x2="268" y2="60"/></g>`;
-    }
-  } else if(t==='indoor'){
-    inner += `<rect width="300" height="220" fill="var(--wall)"/><rect y="160" width="300" height="60" fill="var(--floor)"/>
-    <rect x="210" y="30" width="70" height="60" rx="4" fill="var(--sky)" opacity=".6"/>`;
-  } else if(t==='closeup'){
-    inner += `<rect width="300" height="220" fill="#fdf6ec"/><circle cx="150" cy="100" r="72" fill="var(--rs-accent-soft,#fdece4)"/>`;
-  } else if(t==='sunset'){
-    inner += `<rect width="300" height="200" fill="#f6d9b0"/><circle cx="235" cy="60" r="40" fill="#f5b26a"/><rect y="150" width="300" height="50" fill="#8a8f6b"/>`;
-  } else if(t==='stage'){
-    inner += `<rect width="300" height="220" fill="#2b2b3d"/><circle cx="150" cy="120" r="95" fill="#3d3d55"/><circle cx="150" cy="120" r="60" fill="#4a4a68"/><rect y="185" width="300" height="35" fill="#1c1c2a"/>`;
-  }
-  if(panel.gate) inner += propGate();
-  return `<g class="bg-layer">${inner}</g>`;
-}
-
-/* ============ panel render ============ */
-function renderPanelSVG(panel){
-  const vh = panel.bg==='sunset' ? 200 : 220;
-  let entities = (panel.entities||[]).map(e => e.type==='cat' ? catSVG(e) : humanSVG(e)).join('');
-  let umbrella = panel.umbrella ? propUmbrella(panel.umbrella.x) : '';
-  return `<svg viewBox="0 0 300 ${vh}" xmlns="http://www.w3.org/2000/svg">${bgLayer(panel)}${entities}${umbrella}</svg>`;
+function renderPanelArt(category, id, title, epLabel, epIdx, panelIdx){
+  const path = panelImgPath(category, id, epIdx, panelIdx);
+  const label = `이미지 준비중<br>${title} · ${epLabel} · ${panelIdx+1}컷<br><span style="font-size:10px;opacity:.7;">필요 파일명: ${path}</span>`;
+  return `<div class="art">
+    <img src="${path}" alt="${title} ${epLabel} panel ${panelIdx+1}" loading="lazy"
+      onerror="this.onerror=null;this.parentElement.classList.add('missing');">
+    <div class="missing-label">${label}</div>
+  </div>`;
 }
 const POS = {
   TL:'top:6%;left:5%;', TR:'top:6%;right:5%;',
@@ -236,6 +200,7 @@ function H(x,outfit,hair,flip,mouth,blush){return {type:'human',x,outfit,hair,fl
 function CAT(x,flip,fur){return {type:'cat',x,flip:!!flip,fur};}
 function B(cls,pos,kr,en){return {cls,pos,kr,en};}
 function P(bg,entities,bubbles,extra){return Object.assign({bg,entities,bubbles},extra||{});}
+function NP(kr,en,pos){ return {bubbles:[B('narration', pos||'BC', kr, en)]}; } // 소설/뉴스용: 이미지 1장 + 내레이션 1개
 
 const JIU = (x,flip,mouth,blush)=>H(x,'#7FB3E0','#2b2b2b',flip,mouth,blush);
 const HANEUL = (x,flip,mouth,blush)=>H(x,'#F6C94A','#5a3d28',flip,mouth,blush);
@@ -244,152 +209,6 @@ const BONGGU = (x,flip)=>CAT(x,flip);
 const DAIN = (x,flip,mouth,blush)=>H(x,'#F49AC2','#2b2b2b',flip,mouth,blush);
 const SERA = (x,flip,mouth,blush)=>H(x,'#B48EAD','#5a3d28',flip,mouth,blush);
 const RINA = (x,flip,mouth,blush)=>H(x,'#5EC8C0','#2b2b2b',flip,mouth,blush);
-
-/* ============ series: 비 오는 날 ============ */
-const RAIN_EPISODES = [
-{title:'1화. 첫 만남', panels:[
-  P('rain',[JIU(150,false,'neutral')],[
-    B('narration','TL','등굣길, 갑자기 비가 쏟아지기 시작했다.','On the way to school, the rain suddenly poured down.'),
-    B('bubble thought','MID','아... 우산을 안 챙겼는데.','Ugh... I forgot my umbrella.')
-  ]),
-  P('rain',[JIU(110,false,'neutral'),HANEUL(190,true,'smile')],[
-    B('bubble tail-right','TR','우산 같이 쓸래?','want to share my umbrella?')
-  ],{umbrella:{x:150}}),
-  P('closeup',[JIU(150,false,'open',true)],[
-    B('bubble tail-up','MIDUP','고, 고마워...','th-thanks...')
-  ]),
-  P('outdoor',[JIU(110,false,'smile'),HANEUL(190,true,'smile')],[
-    B('bubble tail-left','TL','그럼 이따 봐!','see you later then!'),
-    B('narration','BC','그렇게, 학기 첫 친구가 생겼다.',"That's how I made my first friend of the semester.")
-  ],{gate:true})
-]},
-{title:'2화. 급식 전쟁', panels:[
-  P('indoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','점심시간, 오늘의 메뉴는 돈까스!',"Lunchtime — today's menu: pork cutlet!")
-  ]),
-  P('indoor',[JIU(110,false,'smile'),HANEUL(190,true,'neutral')],[
-    B('bubble tail-left','TL','내가 두 개 챙겨놨지!','I grabbed two extra for you!')
-  ]),
-  P('closeup',[HANEUL(150,false,'open')],[
-    B('bubble tail-up','MIDUP','역시 내 베프!',"that's my bestie!")
-  ]),
-  P('indoor',[JIU(110,false,'smile'),HANEUL(190,true,'smile')],[
-    B('narration','BC',"그날 이후, 우리는 '돈까스 동맹'이 되었다.","From that day, we became the 'pork cutlet alliance.'")
-  ])
-]},
-{title:'3화. 벼락치기', panels:[
-  P('indoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','시험 하루 전, 아무것도 안 한 우리.',"The day before the exam, we'd studied nothing.")
-  ]),
-  P('closeup',[JIU(150,false,'open')],[
-    B('bubble tail-up','MIDUP','망했다...',"we're doomed...")
-  ]),
-  P('indoor',[JIU(110,false,'neutral'),HANEUL(190,true,'smile')],[
-    B('bubble tail-right','TR','괜찮아, 밤새면 되지!',"it's fine, we'll pull an all-nighter!")
-  ]),
-  P('closeup',[JIU(150,false,'neutral')],[
-    B('narration','BC','결과는... 둘 다 조는 것으로 끝났다.',"In the end, we both just fell asleep.")
-  ])
-]},
-{title:'4화. 체육대회', panels:[
-  P('outdoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','오늘은 반 대항 계주 시합!','Today: the class relay race!')
-  ]),
-  P('outdoor',[HANEUL(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','너만 믿는다!',"I'm counting on you!")
-  ]),
-  P('closeup',[JIU(150,false,'open')],[
-    B('bubble tail-up','MIDUP','으아아아!!','aaaaahh!!')
-  ]),
-  P('outdoor',[JIU(110,false,'smile'),HANEUL(190,true,'smile')],[
-    B('narration','BC','결과는 2등. 그래도 둘이라 즐거웠다.','We came in 2nd. But it was fun together.')
-  ])
-]},
-{title:'5화. 떡볶이 내기', panels:[
-  P('indoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','수학 시험 점수 내기를 했다.','We made a bet on our math scores.')
-  ]),
-  P('indoor',[JIU(110,false,'smile')],[
-    B('bubble tail-left','TL','지는 사람이 떡볶이 쏘기?','loser buys tteokbokki?')
-  ]),
-  P('indoor',[HANEUL(190,true,'smile')],[
-    B('bubble tail-right','TR','콜!','deal!')
-  ]),
-  P('closeup',[HANEUL(150,false,'neutral')],[
-    B('narration','BC','그리고 하늘은 떡볶이를 쐈다.','And so, Haneul ended up buying the tteokbokki.')
-  ])
-]},
-{title:'6화. 조별과제', panels:[
-  P('indoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','조별과제 조원 발표 날.','The day group project teams were announced.')
-  ]),
-  P('indoor',[JIU(150,false,'open')],[
-    B('bubble tail-up','MIDUP','우리 같은 조야!!',"we're in the same group!!")
-  ]),
-  P('indoor',[HANEUL(190,true,'smile'),JIU(110,false,'smile')],[
-    B('bubble tail-right','TR','이번엔 진짜 열심히 하자.',"let's actually work hard this time.")
-  ]),
-  P('closeup',[JIU(150,false,'neutral')],[
-    B('narration','BC','결과는... 발표 전날 카페에서 밤샘.','In the end... an all-nighter at a cafe.')
-  ])
-]},
-{title:'7화. 비밀 편지', panels:[
-  P('indoor',[JIU(150,false,'neutral')],[
-    B('narration','TL','책상 서랍에서 편지 한 장을 발견했다.','I found a note in my desk drawer.')
-  ]),
-  P('closeup',[JIU(150,false,'open')],[
-    B('bubble tail-up','MIDUP','이거... 누가 쓴 거지?','who... wrote this?')
-  ]),
-  P('indoor',[HANEUL(190,true,'open',true)],[
-    B('bubble tail-right','TR','그, 그건 비밀이야!',"th-that's a secret!")
-  ]),
-  P('indoor',[JIU(110,false,'smile'),HANEUL(190,true,'neutral',true)],[
-    B('narration','BC','범인은 아무래도 하늘인 것 같다.',"It seems pretty clear who the culprit was.")
-  ])
-]},
-{title:'8화. 여름방학 계획', panels:[
-  P('outdoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','드디어 여름방학이 시작됐다.','Summer vacation finally began.')
-  ]),
-  P('outdoor',[HANEUL(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','우리 바다 가자!',"let's go to the beach!")
-  ]),
-  P('outdoor',[JIU(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','좋아, 콜!','sounds good, deal!')
-  ]),
-  P('sunset',[JIU(110,false,'smile'),HANEUL(190,true,'smile')],[
-    B('narration','BC','그렇게 우리의 첫 여행이 시작되었다.','And so our first trip together began.')
-  ])
-]},
-{title:'9화. 태풍 휴교', panels:[
-  P('indoor',[JIU(150,false,'neutral')],[
-    B('narration','TL','태풍으로 갑자기 휴교령이 내렸다.','School was suddenly cancelled for a typhoon.')
-  ]),
-  P('closeup',[JIU(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','심심한데 통화할래?',"I'm bored, want to call?")
-  ]),
-  P('closeup',[HANEUL(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','좋지, 세 시간도 가능!',"sure, I could talk for three hours!")
-  ]),
-  P('indoor',[JIU(150,false,'neutral')],[
-    B('narration','BC','결국 우리는 다섯 시간 동안 통화했다.','In the end, we talked for five hours straight.')
-  ])
-]},
-{title:'10화. 1학기의 끝', panels:[
-  P('outdoor',[JIU(110,false,'neutral'),HANEUL(190,true,'neutral')],[
-    B('narration','TL','어느새 1학기가 끝나가고 있었다.','Before we knew it, the semester was ending.')
-  ]),
-  P('outdoor',[HANEUL(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','2학기에도 같은 반이면 좋겠다.','I hope we\u2019re in the same class next semester.')
-  ]),
-  P('closeup',[JIU(150,false,'smile')],[
-    B('bubble tail-up','MIDUP','그러게, 진짜 그랬으면 좋겠어.','yeah, I really hope so too.')
-  ]),
-  P('sunset',[JIU(110,false,'smile'),HANEUL(190,true,'smile')],[
-    B('narration','BC','비 오던 날 시작된 우리의 이야기는, 계속된다.','The story that began on a rainy day continues on.')
-  ])
-]}
-];
 
 /* ============ series: 고양이 집사 일기 ============ */
 const CAT_EPISODES = [
@@ -680,10 +499,15 @@ const IDOL_EPISODES = [
 ];
 
 const SERIES = {
-  rain: {title:'비 오는 날', genre:'학원 · 감성', accent:'#e8734a', accentSoft:'#fdece4', icon:'umbrella', episodes:RAIN_EPISODES},
   cat: {title:'고양이 집사 일기', genre:'일상 · 개그', accent:'#6b8f71', accentSoft:'#e7efe3', icon:'cat', episodes:CAT_EPISODES},
   idol: {title:'아이돌 연습생 다이어리', genre:'청소년 · 아이돌', accent:'#e0568c', accentSoft:'#fde8f0', icon:'star', episodes:IDOL_EPISODES}
 };
+
+/* 소설 데이터는 data/novels.js 파일에서 별도로 관리돼요 (아래에서 불러옴) */
+/* 뉴스 데이터는 news/ 폴더의 텍스트 파일에서 직접 읽어와요 (아래 loadNewsFromFolder 참고) */
+</script>
+<script src="data/novels.js"></script>
+<script>
 
 /* ============ icons ============ */
 function iconSVG(name, color){
@@ -692,6 +516,12 @@ function iconSVG(name, color){
   }
   if(name==='star'){
     return `<svg viewBox="0 0 60 60" width="40" height="40"><path d="M30 8 L36 24 L53 24 L39 34 L44 51 L30 41 L16 51 L21 34 L7 24 L24 24 Z" fill="${color}"/></svg>`;
+  }
+  if(name==='book'){
+    return `<svg viewBox="0 0 60 60" width="40" height="40"><path d="M10 12 Q10 8 16 8 L28 8 L28 48 L16 48 Q10 48 10 44 Z" fill="${color}"/><path d="M50 12 Q50 8 44 8 L32 8 L32 48 L44 48 Q50 48 50 44 Z" fill="${color}" opacity=".75"/></svg>`;
+  }
+  if(name==='news'){
+    return `<svg viewBox="0 0 60 60" width="40" height="40"><rect x="8" y="12" width="38" height="38" rx="3" fill="${color}"/><rect x="16" y="20" width="14" height="10" fill="#fff" opacity=".8"/><rect x="16" y="34" width="22" height="3" fill="#fff" opacity=".8"/><rect x="16" y="40" width="22" height="3" fill="#fff" opacity=".8"/><rect x="34" y="20" width="4" height="10" fill="#fff" opacity=".5"/></svg>`;
   }
   return `<svg viewBox="0 0 60 60" width="40" height="40"><circle cx="30" cy="34" r="18" fill="${color}"/><path d="M16 22 L22 8 L28 20 Z" fill="${color}"/><path d="M44 22 L38 8 L32 20 Z" fill="${color}"/><circle cx="24" cy="32" r="2" fill="#fff"/><circle cx="36" cy="32" r="2" fill="#fff"/></svg>`;
 }
@@ -707,31 +537,79 @@ function swapIcon(){
 
 /* ============ pages ============ */
 const app = document.getElementById('app');
-let savedProgress = 0; // persists language choice across episodes/series
+let savedProgress = 1; // 1 = EN, 0 = KR — starts in English by default
 
-function renderLanding(){
-  const cards = Object.keys(SERIES).map(id => {
-    const s = SERIES[id];
-    return `<a class="series-card" href="#/series/${id}">
-      <div class="series-cover" style="background:${s.accentSoft};">${iconSVG(s.icon, s.accent)}</div>
-      <div class="body">
-        <div class="stitle">${s.title}</div>
-        <div class="genre">${s.genre}</div>
-        <span class="count">전체 ${s.episodes.length}화</span>
-      </div>
-    </a>`;
-  }).join('');
+function tabBar(active){
+  const tabs = [['news','뉴스'],['novel','소설'],['webtoon','웹툰']];
+  return `<div class="tab-bar">${tabs.map(([k,label])=>
+    `<button class="tab-btn${k===active?' active':''}" data-tab="${k}" type="button">${label}</button>`
+  ).join('')}</div>`;
+}
+
+function renderLanding(tab){
+  tab = tab || 'webtoon';
+  let body = '';
+  if(tab==='webtoon'){
+    const cards = Object.keys(SERIES).map(id => {
+      const s = SERIES[id];
+      return `<a class="series-card" href="#/webtoon/series/${id}">
+        <div class="series-cover" style="background:${s.accentSoft};">${iconSVG(s.icon, s.accent)}</div>
+        <div class="body">
+          <div class="stitle">${s.title}</div>
+          <div class="genre">${s.genre}</div>
+          <span class="count">전체 ${s.episodes.length}화</span>
+        </div>
+      </a>`;
+    }).join('');
+    body = `<div class="series-grid">${cards}</div>`;
+  } else if(tab==='novel'){
+    const cards = Object.keys(NOVELS).map(id => {
+      const n = NOVELS[id];
+      return `<a class="series-card" href="#/novel/${id}">
+        <div class="series-cover" style="background:${n.accentSoft};">${iconSVG(n.icon, n.accent)}</div>
+        <div class="body">
+          <div class="stitle">${n.title}</div>
+          <div class="genre">${n.genre}</div>
+          <span class="count">전체 ${n.chapters.length}화</span>
+        </div>
+      </a>`;
+    }).join('');
+    body = `<div class="series-grid">${cards}</div>`;
+  } else if(tab==='news'){
+    if(newsLoadError){
+      body = `<div class="news-list"><div class="news-card" style="color:#9a9385;">
+        뉴스를 불러오지 못했어요.<br><br>
+        이 파일을 더블클릭해서 로컬로 바로 열면, 브라우저 보안 정책 때문에
+        <b>news 폴더의 텍스트 파일을 읽지 못할 수 있어요</b>.<br><br>
+        Netlify Drop 같은 곳에 올려서 웹 주소로 열면 정상적으로 보여요.
+      </div></div>`;
+    } else {
+      const cards = Object.keys(NEWS).map(id => {
+        const a = NEWS[id];
+        return `<a class="news-card" href="#/news/read/${id}">
+          <span class="tag">${a.tag}</span>
+          <div class="ntitle">${a.title}</div>
+          <div class="nsum">${savedProgress>=0.5 ? a.panels[0].bubbles[0].en : a.panels[0].bubbles[0].kr}</div>
+        </a>`;
+      }).join('');
+      body = `<div class="news-list">${cards || '<div class="news-card" style="color:#9a9385;">아직 등록된 기사가 없어요.</div>'}</div>`;
+    }
+  }
   app.innerHTML = `
     <div class="site-header"><h1>웹툰</h1><p>매일 보고 싶은 이야기</p></div>
-    <div class="series-grid">${cards}</div>
+    ${tabBar(tab)}
+    ${body}
   `;
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ location.hash = '#/tab/' + btn.dataset.tab; });
+  });
 }
 
 function renderSeriesPage(id){
   const s = SERIES[id];
   if(!s){ location.hash = '#/'; return; }
   const rows = s.episodes.map((ep,i) => `
-    <a class="ep-row" href="#/read/${id}/${i}">
+    <a class="ep-row" href="#/webtoon/read/${id}/${i}">
       <div class="ep-thumb" style="background:${s.accentSoft};">${iconSVG(s.icon, s.accent)}</div>
       <div class="info">
         <div class="etitle">${ep.title}</div>
@@ -740,48 +618,64 @@ function renderSeriesPage(id){
       <span class="chev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span>
     </a>`).join('');
   app.innerHTML = `
-    <div class="back-row"><a href="#/" style="display:flex;align-items:center;gap:8px;">${backArrow()}<span style="font-size:13px;">전체 웹툰</span></a></div>
+    <div class="back-row"><a href="#/tab/webtoon" style="display:flex;align-items:center;gap:8px;">${backArrow()}<span style="font-size:13px;">전체 웹툰</span></a></div>
     <div class="series-head"><h2>${s.title}</h2><div class="genre">${s.genre}</div></div>
     <div class="ep-list">${rows}</div>
   `;
 }
 
-function renderReader(id, epIdx){
-  const s = SERIES[id];
-  if(!s || !s.episodes[epIdx]){ location.hash = '#/series/'+id; return; }
-  const ep = s.episodes[epIdx];
-  const panelsHTML = ep.panels.map((p,i) => {
-    const hue = (epIdx * 36) % 360;
-    return `<div class="panel"><div style="filter:hue-rotate(${hue}deg);" class="bg-wrap">${renderPanelSVG(p)}</div>${renderBubbles(p)}</div>`;
+function renderNovelChapters(id){
+  const n = NOVELS[id];
+  if(!n){ location.hash = '#/'; return; }
+  const rows = n.chapters.map((c,i) => `
+    <a class="ep-row" href="#/novel/read/${id}/${i}">
+      <div class="ep-thumb" style="background:${n.accentSoft};">${iconSVG(n.icon, n.accent)}</div>
+      <div class="info">
+        <div class="etitle">${c.title}</div>
+        <div class="esub">${c.panels.length}컷</div>
+      </div>
+      <span class="chev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span>
+    </a>`).join('');
+  app.innerHTML = `
+    <div class="back-row"><a href="#/tab/novel" style="display:flex;align-items:center;gap:8px;">${backArrow()}<span style="font-size:13px;">전체 소설</span></a></div>
+    <div class="series-head"><h2>${n.title}</h2><div class="genre">${n.genre}</div></div>
+    <div class="ep-list">${rows}</div>
+  `;
+}
+
+function renderPanelReader(o){
+  const panelsHTML = o.panels.map((p,i) => {
+    if(o.showArt === false){
+      const paras = (p.bubbles||[]).map(b => `<p class="para"><span class="kr">${b.kr}</span><span class="en">${b.en}</span></p>`).join('');
+      return `<div class="panel panel-text">${paras}</div>`;
+    }
+    return `<div class="panel">${renderPanelArt(o.category, o.id, o.seriesTitle, o.epLabel, o.epIdx, i)}${renderBubbles(p)}</div>`;
   }).join('');
 
   app.innerHTML = `
-    <div class="reader-header" style="--rs-accent:${s.accent};">
-      <a href="#/series/${id}" style="display:flex;">${backArrow()}</a>
+    <div class="reader-header" style="--rs-accent:${o.accent};">
+      <a href="${o.backHref}" style="display:flex;">${backArrow()}</a>
       <div class="titles">
-        <div class="etitle">${ep.title}</div>
-        <div class="sname">${s.title}</div>
+        <div class="etitle">${o.epTitle}</div>
+        <div class="sname">${o.seriesTitle}</div>
       </div>
       <button id="btnKr" class="langBtn active" type="button">KR</button>
       ${swapIcon()}
       <button id="btnEn" class="langBtn" type="button">EN</button>
     </div>
-    <main class="reader" style="--rs-accent-soft:${s.accentSoft};">
+    <main class="reader" style="--rs-accent-soft:${o.accentSoft};">
       ${panelsHTML}
     </main>
     <div class="hint">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      <span>아무 컷이나 좌우로 밀면 언어가 바뀌어요</span>
+      <span>${o.showArt === false ? '아무 곳이나 좌우로 밀면 언어가 바뀌어요' : '아무 컷이나 좌우로 밀면 언어가 바뀌어요'}</span>
     </div>
-    <div class="ep-nav">
-      <button id="prevEp" ${epIdx<=0?'disabled':''}>◀ 이전화</button>
-      <button id="nextEp" ${epIdx>=s.episodes.length-1?'disabled':''}>다음화 ▶</button>
-    </div>
-    <footer class="note">${epIdx+1} / ${s.episodes.length}화</footer>
+    ${o.showNav ? `<div class="ep-nav">
+      <button id="prevEp" ${!o.prevHref?'disabled':''}>◀ 이전화</button>
+      <button id="nextEp" ${!o.nextHref?'disabled':''}>다음화 ▶</button>
+    </div>` : ''}
+    <footer class="note">${o.footerText}</footer>
   `;
-
-  // fix bg-wrap so svg still fills width (filter wrapper shouldn't break layout)
-  document.querySelectorAll('.bg-wrap').forEach(w=>{ w.style.display='block'; });
 
   const panels = Array.from(document.querySelectorAll('.panel'));
   const btnKr = document.getElementById('btnKr');
@@ -800,7 +694,7 @@ function renderReader(id, epIdx){
   function toggleLang(){ applyProgressAll(globalProgress >= 0.5 ? 0 : 1); }
   btnKr.addEventListener('click', toggleLang);
   btnEn.addEventListener('click', toggleLang);
-  applyProgressAll(savedProgress); // sync initial view (e.g. stay on EN across episodes)
+  applyProgressAll(savedProgress);
 
   function down(x,y){ startX=x; startY=y; horizontal=null; dragging=true; startProgress=globalProgress; }
   function move(x,y){
@@ -835,20 +729,107 @@ function renderReader(id, epIdx){
 
   const prevBtn = document.getElementById('prevEp');
   const nextBtn = document.getElementById('nextEp');
-  if(prevBtn) prevBtn.addEventListener('click', ()=>{ if(epIdx>0) location.hash = `#/read/${id}/${epIdx-1}`; });
-  if(nextBtn) nextBtn.addEventListener('click', ()=>{ if(epIdx<s.episodes.length-1) location.hash = `#/read/${id}/${epIdx+1}`; });
+  if(prevBtn) prevBtn.addEventListener('click', ()=>{ if(o.prevHref) location.hash = o.prevHref; });
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{ if(o.nextHref) location.hash = o.nextHref; });
   window.scrollTo(0,0);
+}
+
+function renderReader(id, epIdx){
+  const s = SERIES[id];
+  if(!s || !s.episodes[epIdx]){ location.hash = '#/webtoon/series/'+id; return; }
+  const ep = s.episodes[epIdx];
+  renderPanelReader({
+    category:'webtoon', id, seriesTitle:s.title, accent:s.accent, accentSoft:s.accentSoft,
+    epTitle:ep.title, epLabel:`${epIdx+1}화`, panels:ep.panels, epIdx,
+    backHref:`#/webtoon/series/${id}`,
+    prevHref: epIdx>0 ? `#/webtoon/read/${id}/${epIdx-1}` : null,
+    nextHref: epIdx<s.episodes.length-1 ? `#/webtoon/read/${id}/${epIdx+1}` : null,
+    showNav:true,
+    footerText:`${epIdx+1} / ${s.episodes.length}화`
+  });
+}
+
+function renderNovelReader(id, chapIdx){
+  const n = NOVELS[id];
+  if(!n || !n.chapters[chapIdx]){ location.hash = '#/novel/'+id; return; }
+  const ch = n.chapters[chapIdx];
+  renderPanelReader({
+    category:'novel', id, seriesTitle:n.title, accent:n.accent, accentSoft:n.accentSoft,
+    epTitle:ch.title, epLabel:`${chapIdx+1}화`, panels:ch.panels, epIdx:chapIdx,
+    backHref:`#/novel/${id}`,
+    prevHref: chapIdx>0 ? `#/novel/read/${id}/${chapIdx-1}` : null,
+    nextHref: chapIdx<n.chapters.length-1 ? `#/novel/read/${id}/${chapIdx+1}` : null,
+    showNav:true, showArt:false,
+    footerText:`${chapIdx+1} / ${n.chapters.length}화`
+  });
+}
+
+function renderNewsReader(id){
+  const a = NEWS[id];
+  if(!a){ location.hash = '#/tab/news'; return; }
+  renderPanelReader({
+    category:'news', id, seriesTitle:'뉴스', accent:'#5a6b8a', accentSoft:'#e8ebf1',
+    epTitle:a.title, epLabel:'기사', panels:a.panels, epIdx:0,
+    backHref:'#/tab/news',
+    prevHref:null, nextHref:null,
+    showNav:false, showArt:false,
+    footerText:a.tag
+  });
+}
+
+/* ============ news (news/ 폴더의 .txt 파일에서 로드) ============ */
+let NEWS = {};
+let newsLoadError = false;
+
+function parseNewsText(text){
+  text = text.replace(/\r\n/g, '\n');
+  const titleMatch = text.match(/^제목:\s*(.+)$/m);
+  const tagMatch = text.match(/^태그:\s*(.+)$/m);
+  const krBlock = (text.split(/^한국어:\s*$/m)[1] || '').split(/^영어:\s*$/m)[0] || '';
+  const enBlock = (text.split(/^영어:\s*$/m)[1] || '');
+  const krParas = krBlock.split(/^---$/m).map(s=>s.trim()).filter(Boolean);
+  const enParas = enBlock.split(/^---$/m).map(s=>s.trim()).filter(Boolean);
+  const panels = krParas.map((kr,i)=> NP(kr, enParas[i] || ''));
+  return {
+    title: titleMatch ? titleMatch[1].trim() : '(제목 없음)',
+    tag: tagMatch ? tagMatch[1].trim() : '',
+    panels
+  };
+}
+
+async function loadNewsFromFolder(){
+  try{
+    const idxRes = await fetch('news/_index.txt');
+    if(!idxRes.ok) throw new Error('news/_index.txt를 찾을 수 없어요');
+    const ids = (await idxRes.text()).split('\n').map(s=>s.trim()).filter(Boolean);
+    const entries = {};
+    for(const id of ids){
+      try{
+        const res = await fetch(`news/${id}.txt`);
+        if(!res.ok) continue;
+        entries[id] = parseNewsText(await res.text());
+      }catch(e){ console.warn('기사 로드 실패:', id, e); }
+    }
+    NEWS = entries;
+  }catch(e){
+    console.warn('[뉴스 폴더 로드 실패]', e);
+    newsLoadError = true;
+  }
 }
 
 /* ============ router ============ */
 function route(){
   const parts = (location.hash.slice(1)||'/').split('/').filter(Boolean);
-  if(parts[0]==='series') renderSeriesPage(parts[1]);
-  else if(parts[0]==='read') renderReader(parts[1], parseInt(parts[2],10)||0);
-  else renderLanding();
+  if(parts[0]==='tab') renderLanding(parts[1]);
+  else if(parts[0]==='webtoon' && parts[1]==='series') renderSeriesPage(parts[2]);
+  else if(parts[0]==='webtoon' && parts[1]==='read') renderReader(parts[2], parseInt(parts[3],10)||0);
+  else if(parts[0]==='novel' && parts[1]==='read') renderNovelReader(parts[2], parseInt(parts[3],10)||0);
+  else if(parts[0]==='novel') renderNovelChapters(parts[1]);
+  else if(parts[0]==='news' && parts[1]==='read') renderNewsReader(parts[2]);
+  else renderLanding('webtoon');
 }
 window.addEventListener('hashchange', route);
-route();
+loadNewsFromFolder().finally(route);
 </script>
 
 </body>
